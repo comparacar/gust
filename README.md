@@ -202,6 +202,18 @@ docker compose up
 ```
 
 
+---
+
+## Features
+
+  - Task orchestration with Cron-style scheduling and dependency-aware DAGs via the Gust DSL.
+  - Support multiple nodes.
+  - [Support for Python DAGs](https://github.com/marciok/gust/tree/main/apps/gust_py)
+  - Manual task controls: stop running tasks, cancel retries, and restart tasks on demand.
+  - Run-time tracking, corrupted-state recovery, and graceful handling of syntax errors during development.
+  - Retry logic with backoff, plus state clearing for clean restarts.
+  - Hook for finished dag run.
+  - Web UI for live monitoring, runs and secrets editing.
 
 
 ---
@@ -227,21 +239,6 @@ config :gust_web, mcp_enabled: true
 
 
 ---
-
-## Features
-
-  - Task orchestration with Cron-style scheduling and dependency-aware DAGs via the Gust DSL.
-  - Support multiple nodes.
-  - [Support for Python DAGs](https://github.com/marciok/gust/tree/main/apps/gust_py)
-  - Manual task controls: stop running tasks, cancel retries, and restart tasks on demand.
-  - Run-time tracking, corrupted-state recovery, and graceful handling of syntax errors during development.
-  - Retry logic with backoff, plus state clearing for clean restarts.
-  - Hook for finished dag run.
-  - Web UI for live monitoring, runs and secrets editing.
----
-
-
-
 
 
 ## Adding Gust to an existing Phoenix app

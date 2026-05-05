@@ -1,5 +1,3 @@
-# Build this Dockerfile from the umbrella root:
-#   docker build -f apps/gust_web/Dockerfile -t gust_web:0.1.29 .
 
 # Find eligible builder and runner images on Docker Hub. We use Debian
 # instead of Alpine to avoid DNS resolution issues in production.
@@ -72,7 +70,5 @@ RUN chown nobody /app
 COPY --from=builder --chown=nobody:root /app/_build/${MIX_ENV}/rel/gust ./
 
 USER nobody
-
-EXPOSE 4000
 
 CMD ["/app/bin/start-core"]

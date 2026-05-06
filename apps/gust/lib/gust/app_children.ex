@@ -4,9 +4,23 @@ defmodule Gust.AppChildren do
 
   The `for_role/3` function returns a list of supervisors and workers based on:
 
-  * the runtime role (`"web"` vs everything else)
+  * the runtime role
   * the Mix environment (`test`, `dev`, `prod`)
   * the configured DAG folder
+
+  In practice, roles are used with the broader release like this:
+
+  * `"console"` loads DAG definitions and supporting runtime pieces, but does
+    not execute DAG pooling because `Gust.Run.Pooler` and
+    `Gust.DAG.Terminator.Worker` are not started
+  * `"web"` is intended for the web-facing runtime: it loads DAG definitions for
+    the UI, while DAG pooling remains disabled
+  * `"core"` loads DAGs, skips the web application, and runs the DAG pool
+  * `"single"` loads DAGs, runs the web application, and runs the DAG pool
+
+  Within this module specifically, `"web"` contributes only the DAG loader
+  worker outside `test`, while `"console"` contributes the loader, watcher,
+  leader, and runner supervisors without the pooling workers.
 
   In `test`, DAG runtime pieces (pooler, leader, loader, watcher) are skipped.
   In `prod`, the file watcher is disabled. In `dev`, the watcher is enabled to

@@ -189,8 +189,8 @@ policy outside the macro, at the router scope or pipeline level.
 
 ### Connect to an MCP client
 
-- claude: `claude mcp add --transport http gust-mcp http://localhost:4000/mcp/server`
-- codex: `codex mcp add gust-mcp --url http://localhost:4000/mcp/server`
+- claude: `claude mcp add --transport http gust-mcp http://localhost:4000/gust/mcp/server`
+- codex: `codex mcp add gust-mcp --url http://localhost:4000/gust/mcp/server`
 
 ### Skills
 

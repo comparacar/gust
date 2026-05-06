@@ -83,8 +83,7 @@ if Code.ensure_loaded?(Igniter) do
         {:gust, [Gust.Repo, :database], code(~s[System.get_env("PG_DATABASE", "#{database}")])},
         {:gust, [Gust.Repo, :pool_size], 10},
         {:gust, [Gust.Repo, :show_sensitive_data_on_connection_error], true},
-        {:gust, [:b64_secrets_cloak_key], cloak_key},
-        {:gust_web, [:basic_auth], true}
+        {:gust, [:b64_secrets_cloak_key], cloak_key}
       ])
       |> Igniter.add_notice("""
       Postgres credentials default to postgres/postgres@localhost in dev.
@@ -113,6 +112,18 @@ if Code.ensure_loaded?(Igniter) do
       scope_code = """
         pipe_through [:browser]
 
+        # This route is public by default, don't forget to add auth before deploying to prod, ex:
+        # auth_enabled? = Application.compile_env(:#{name}, :basic_auth)
+        #
+        # if auth_enabled? do
+        #   defp basic_auth(conn, _opts) do
+        #     Plug.BasicAuth.basic_auth(conn,
+        #       username: System.get_env("BASIC_AUTH_USER"),
+        #       password: System.get_env("BASIC_AUTH_PASS")
+        #     )
+        #   end
+        # end
+        #
         gust_dashboard()
       """
 

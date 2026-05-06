@@ -33,10 +33,15 @@ if [ -z "$GUST_APP" ]; then
   exit 1
 fi
 
-echo "==> Creating new Igniter Phoenix app: $GUST_APP"
-mix igniter.new "$GUST_APP" --install gust_web --with phx.new
+# This script will install gust_web on a minimal Phoenix app,
+# if you wish to extend, and add the missing dependencies like LiveView you can manually add later.
+echo "==> Creating new minimal Igniter Phoenix app: $GUST_APP"
+mix igniter.new "$GUST_APP" --install gust_web --with phx.new --with-args="--no-html --no-assets --no-gettext --no-mailer"
 
 cd "$GUST_APP"
+mix deps.get
+
+echo "==> Fetching dependencies"
 
 echo
 echo "==> Done!"

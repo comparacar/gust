@@ -118,6 +118,42 @@ defmodule Mix.Tasks.GustWebInstallTest do
     %{igniter: Igniter.compose_task(project, "gust_web.install")}
   end
 
+  def minimal_router_proj(%{}) do
+    project =
+      test_project(
+        app_name: :my_app,
+        files: %{
+          "lib/my_app_web/router.ex" => """
+          defmodule MyAppWeb.Router do
+            use Phoenix.Router
+
+            pipeline :api do
+              plug :accepts, ["json"]
+            end
+
+            scope "/api", MyAppWeb do
+              pipe_through :api
+            end
+          end
+          """,
+          "config/config.exs" => """
+          import Config
+          """,
+          "config/dev.exs" => """
+          import Config
+          """,
+          "config/test.exs" => """
+          import Config
+          """,
+          "config/runtime.exs" => """
+          import Config
+          """
+        }
+      )
+
+    %{igniter: Igniter.compose_task(project, "gust_web.install")}
+  end
+
   test "installs into a phoenix project", %{igniter: igniter} do
     igniter
     |> assert_has_patch("config/config.exs", """
@@ -127,7 +163,16 @@ defmodule Mix.Tasks.GustWebInstallTest do
     + |  app_name: :my_app,
     """)
     |> assert_creates("dags/.keep")
-    |> assert_has_notice(&String.contains?(&1, "Gust installed"))
+    |> assert_has_notice(&String.contains?(&1, "Gust is installed!"))
+  end
+
+  test "adds the expected dependencies to mix.exs", %{igniter: igniter} do
+    mix_diff = diff(igniter, only: "mix.exs")
+    gust_web_version = GustWeb.MixProject.project()[:version]
+
+    assert mix_diff =~ ~s(+ |      {:gust_web, "#{gust_web_version}"})
+    assert mix_diff =~ ~s(+ |      {:file_system, "~> 1.1", only: :dev})
+    assert mix_diff =~ ~s(+ |      {:hackney, "~> 1.9"})
   end
 
   test "adds import and scope to router", %{igniter: igniter} do
@@ -138,6 +183,16 @@ defmodule Mix.Tasks.GustWebInstallTest do
     |> assert_has_patch("lib/my_app_web/router.ex", """
     + | gust_dashboard()
     """)
+  end
+
+  test "does not add browser pipeline when it already exists", %{igniter: igniter} do
+    router_diff = diff(igniter, only: "lib/my_app_web/router.ex")
+
+    refute router_diff =~ "+ |  pipeline :browser do"
+    refute router_diff =~ "+ |    plug(:fetch_session)"
+    refute router_diff =~ "+ |    plug(:fetch_flash)"
+    refute router_diff =~ "+ |    plug(:protect_from_forgery)"
+    refute router_diff =~ "+ |    plug(:put_secure_browser_headers)"
   end
 
   test "configures dev database", %{igniter: igniter} do
@@ -210,6 +265,26 @@ defmodule Mix.Tasks.GustWebInstallTest do
 
     test "skips duplicate router import", %{igniter: igniter} do
       igniter
+      |> assert_has_patch("lib/my_app_web/router.ex", """
+      + | gust_dashboard()
+      """)
+    end
+  end
+
+  describe "app does not define a browser pipeline" do
+    setup [:minimal_router_proj]
+
+    test "adds a minimal browser pipeline", %{igniter: igniter} do
+      igniter
+      |> assert_has_patch("lib/my_app_web/router.ex", """
+      + | pipeline :browser do
+      + |   plug(:accepts, ["html"])
+      + |   plug(:fetch_session)
+      + |   plug(:fetch_flash)
+      + |   plug(:protect_from_forgery)
+      + |   plug(:put_secure_browser_headers)
+      + | end
+      """)
       |> assert_has_patch("lib/my_app_web/router.ex", """
       + | gust_dashboard()
       """)

@@ -126,9 +126,9 @@ end
 
 ```
 GUST_APP=my_app bash -c "$(curl -fsSL https://raw.githubusercontent.com/marciok/gust/main/setup_gust_app.sh)"
-
 ```
-	 
+*You can check what install script will perform [here](https://github.com/marciok/gust/blob/main/setup_gust_app.sh)*
+
 2. Configure Postgres credentials on `my_app/config/dev.exs`
 
 3. Run database setup:
@@ -141,7 +141,7 @@ GUST_APP=my_app bash -c "$(curl -fsSL https://raw.githubusercontent.com/marciok/
 
 5. Check [the docs](https://hexdocs.pm/gust/Gust.DSL.html) on how to customize your DAG
 
-6. Open  "http://localhost:4000/gust" to visualize your app
+6. Open  "http://localhost:4000/gust/dags" to visualize your app
 
 
 ---
@@ -264,7 +264,7 @@ mix ecto.migrate
 mix phx.server
 ```
 
-Open "http://localhost:4000/gust".
+Open "http://localhost:4000/gust/dags".
 
 ---
 

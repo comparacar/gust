@@ -163,7 +163,7 @@ defmodule Mix.Tasks.GustWebInstallTest do
     + |  app_name: :my_app,
     """)
     |> assert_creates("dags/.keep")
-    |> assert_has_notice(&String.contains?(&1, "Gust installed"))
+    |> assert_has_notice(&String.contains?(&1, "Gust is installed!"))
   end
 
   test "adds the expected dependencies to mix.exs", %{igniter: igniter} do

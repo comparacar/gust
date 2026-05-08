@@ -127,9 +127,9 @@ end
 
 ```
 GUST_APP=my_app bash -c "$(curl -fsSL https://raw.githubusercontent.com/marciok/gust/main/setup_gust_app.sh)"
-
 ```
-	 
+*You can check what install script will perform [here](https://github.com/marciok/gust/blob/main/setup_gust_app.sh)*
+
 2. Configure Postgres credentials on `my_app/config/dev.exs`
 
 3. Run database setup:
@@ -142,7 +142,7 @@ GUST_APP=my_app bash -c "$(curl -fsSL https://raw.githubusercontent.com/marciok/
 
 5. Check [the docs](https://hexdocs.pm/gust/Gust.DSL.html) on how to customize your DAG
 
-6. Open  "http://localhost:4000/gust" to visualize your app
+6. Open  "http://localhost:4000/gust/dags" to visualize your app
 
 
 ---
@@ -164,17 +164,34 @@ GUST_APP=my_app bash -c "$(curl -fsSL https://raw.githubusercontent.com/marciok/
 
 GustWeb includes a built-in MCP server that gives your LLM access to Gust’s core features, including listing DAGs, triggering runs, exploring DAG definitions, and debugging executions.
 
-To enable it, add the following to your config file:
+To mount it in your Phoenix router:
 
 ```elixir
-# dev.exs
-config :gust_web, mcp_enabled: true
+import GustWeb.MCPRouter
+
+scope "/mcp", MyAppWeb do
+  pipe_through :api
+  gust_mcp_server()
+end
 ```
+
+The prefix comes from your `MyAppWeb` router scope, so you can also mount it
+under a project-specific path to avoid clashes:
+
+```elixir
+scope "/gust/mcp", MyAppWeb do
+  pipe_through :api
+  gust_mcp_server()
+end
+```
+
+That would expose `POST /gust/mcp/server`. Keep auth and any app-specific
+policy outside the macro, at the router scope or pipeline level.
 
 ### Connect to an MCP client
 
-- claude: `claude mcp add --transport http gust-mcp http://localhost:4000/mcp/server`
-- codex: `codex mcp add gust-mcp --url http://localhost:4000/mcp/server`
+- claude: `claude mcp add --transport http gust-mcp http://localhost:4000/gust/mcp/server`
+- codex: `codex mcp add gust-mcp --url http://localhost:4000/gust/mcp/server`
 
 ### Skills
 
@@ -248,7 +265,7 @@ mix ecto.migrate
 mix phx.server
 ```
 
-Open "http://localhost:4000/gust".
+Open "http://localhost:4000/gust/dags".
 
 ---
 

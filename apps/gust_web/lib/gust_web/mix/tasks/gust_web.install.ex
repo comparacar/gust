@@ -4,6 +4,7 @@ if Code.ensure_loaded?(Igniter) do
     @shortdoc "Installs \"gust_web\" into your project"
 
     @dags_dir "dags"
+    @gust_web_version "0.1.31"
 
     use Igniter.Mix.Task
 
@@ -36,14 +37,16 @@ if Code.ensure_loaded?(Igniter) do
       |> test_config()
       |> Igniter.create_new_file("dags/.keep", ".gitkeep", onexists: :skip)
       |> add_import(name)
+      |> ensure_browser_pipeline(name)
       |> add_scope(name)
       |> final_notice()
     end
 
     defp install_deps(igniter) do
       igniter
+      |> Deps.add_dep({:hackney, "~> 1.9"})
       |> Deps.add_dep({:file_system, "~> 1.1", only: :dev})
-      |> Deps.add_dep({:gust_web, "0.1.30"})
+      |> Deps.add_dep({:gust_web, @gust_web_version})
     end
 
     defp config_setup(igniter, name) do
@@ -83,8 +86,7 @@ if Code.ensure_loaded?(Igniter) do
         {:gust, [Gust.Repo, :database], code(~s[System.get_env("PG_DATABASE", "#{database}")])},
         {:gust, [Gust.Repo, :pool_size], 10},
         {:gust, [Gust.Repo, :show_sensitive_data_on_connection_error], true},
-        {:gust, [:b64_secrets_cloak_key], cloak_key},
-        {:gust_web, [:basic_auth], true}
+        {:gust, [:b64_secrets_cloak_key], cloak_key}
       ])
       |> Igniter.add_notice("""
       Postgres credentials default to postgres/postgres@localhost in dev.
@@ -113,10 +115,37 @@ if Code.ensure_loaded?(Igniter) do
       scope_code = """
         pipe_through [:browser]
 
+        # This route is public by default, don't forget to add auth before deploying to prod, ex:
+        # auth_enabled? = Application.compile_env(:#{name}, :basic_auth)
+        #
+        # if auth_enabled? do
+        #   defp basic_auth(conn, _opts) do
+        #     Plug.BasicAuth.basic_auth(conn,
+        #       username: System.get_env("BASIC_AUTH_USER"),
+        #       password: System.get_env("BASIC_AUTH_PASS")
+        #     )
+        #   end
+        # end
+        #
         gust_dashboard()
       """
 
       PhoenixLib.add_scope(igniter, "/", scope_code, router: router_module(name))
+    end
+
+    defp ensure_browser_pipeline(igniter, name) do
+      browser_pipeline = """
+        plug :accepts, ["html"]
+        plug :fetch_session
+        plug :fetch_flash
+        plug :protect_from_forgery
+        plug :put_secure_browser_headers
+      """
+
+      PhoenixLib.add_pipeline(igniter, :browser, browser_pipeline,
+        router: router_module(name),
+        warn_on_present?: false
+      )
     end
 
     defp add_import(igniter, name) do
@@ -176,13 +205,16 @@ if Code.ensure_loaded?(Igniter) do
     defp final_notice(igniter) do
       Igniter.add_notice(igniter, """
 
-      Gust installed. Next:
+      Gust is installed! 
 
-          mix ecto.create
-          mix ecto.migrate
-          mix phx.server
+      Next, update your postgres credentials, and run:
 
-      Then open http://localhost:4000/gust.
+      1. mix deps.get
+      2. mix ecto.create
+      3. mix ecto.migrate
+      4. mix phx.server
+
+      Then open http://localhost:4000/gust/dags.
 
       To change the dashboard mount path, update :dashboard_path in
       config.exs and the gust_dashboard call in your router to match.

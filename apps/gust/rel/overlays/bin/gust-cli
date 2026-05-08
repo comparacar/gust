@@ -1,0 +1,7 @@
+#!/bin/sh
+set -eu
+
+cd -P -- "$(dirname -- "$0")"
+
+export GUST_ROLE=console
+exec ./gust eval "Gust.CLI.exec(System.argv())" "$@"

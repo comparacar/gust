@@ -10,6 +10,8 @@ defmodule Gust.CLI do
   * `trigger_run <dag_name>`: starts the application, looks up the DAG by name,
     creates a run for it, and dispatches that run through the configured
     `Gust.DAG.Run.Trigger` implementation.
+  * `dag_definition <dag_name>`: returns the DAG definition payload as JSON,
+    including the definition load status.
 
   Example:
 
@@ -17,6 +19,7 @@ defmodule Gust.CLI do
   """
 
   alias Gust.DAG.Run.Trigger
+  alias Gust.DAG.Definition
   alias Gust.Flows
   require Logger
 
@@ -26,6 +29,7 @@ defmodule Gust.CLI do
   Currently supported commands:
 
   * `["trigger_run", dag_name]`
+  * `["dag_definition", dag_name]`
   """
   def exec(["trigger_run", dag_name]) do
     load_app()
@@ -35,6 +39,27 @@ defmodule Gust.CLI do
     run = Trigger.dispatch_run(run)
 
     Logger.warning("Triggered DAG #{dag.name}; Run: #{run.id}")
+  end
+
+  def exec(["dag_definition", dag_name]) do
+    load_app()
+
+    dag = Flows.get_dag_by_name(dag_name)
+
+    case Gust.DAG.Loader.get_definition(dag.id) do
+      {:ok, dag_def} ->
+        %{
+          status: :ok,
+          definition: Definition.to_map(dag_def)
+        }
+
+      {:error, error} ->
+        %{
+          status: :error,
+          error: inspect(error)
+        }
+    end
+    |> Jason.encode!()
   end
 
   defp load_app do

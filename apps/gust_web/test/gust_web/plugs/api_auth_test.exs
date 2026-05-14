@@ -29,6 +29,15 @@ defmodule GustWeb.Plugs.APIAuthTest do
     refute conn.halted
   end
 
+  test "allows bearer scheme with different casing", %{conn: conn} do
+    conn =
+      conn
+      |> put_req_header("authorization", "bearer #{@token}")
+      |> APIAuth.call([])
+
+    refute conn.halted
+  end
+
   test "halts requests without authorization", %{conn: conn} do
     conn = APIAuth.call(conn, [])
 

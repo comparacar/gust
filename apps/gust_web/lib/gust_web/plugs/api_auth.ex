@@ -13,7 +13,7 @@ defmodule GustWeb.Plugs.APIAuth do
 
   @impl Plug
   def call(conn, _opts) do
-    with ["Bearer " <> token] <- get_req_header(conn, "authorization"),
+    with {:ok, token} <- bearer_token(conn),
          true <- token_valid?(token) do
       conn
     else
@@ -22,6 +22,30 @@ defmodule GustWeb.Plugs.APIAuth do
         |> put_status(:unauthorized)
         |> json(%{error: "unauthorized"})
         |> halt()
+    end
+  end
+
+  defp bearer_token(conn) do
+    case get_req_header(conn, "authorization") do
+      [authorization] ->
+        parse_authorization(authorization)
+
+      _ ->
+        :error
+    end
+  end
+
+  defp parse_authorization(authorization) do
+    case String.split(authorization, " ", parts: 2) do
+      [scheme, token] ->
+        if String.downcase(scheme) == "bearer" and token != "" do
+          {:ok, token}
+        else
+          :error
+        end
+
+      _ ->
+        :error
     end
   end
 

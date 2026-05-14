@@ -45,6 +45,16 @@ defmodule GustWeb.Plugs.APIAuthTest do
     assert json_response(conn, 401) == %{"error" => "unauthorized"}
   end
 
+  test "halts requests with malformed authorization", %{conn: conn} do
+    conn =
+      conn
+      |> put_req_header("authorization", "Bearer")
+      |> APIAuth.call([])
+
+    assert conn.halted
+    assert json_response(conn, 401) == %{"error" => "unauthorized"}
+  end
+
   test "halts requests with an invalid bearer token", %{conn: conn} do
     conn =
       conn

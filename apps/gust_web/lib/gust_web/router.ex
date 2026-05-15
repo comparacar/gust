@@ -32,6 +32,16 @@ defmodule GustWeb.Router do
     gust_dashboard()
   end
 
+  if Application.compile_env(:gust_web, :api_enabled) do
+    import GustWeb.API
+
+    scope "/api" do
+      pipe_through(:api)
+
+      gust_api()
+    end
+  end
+
   if Application.compile_env(:gust_web, :mcp_enabled) do
     import GustWeb.MCPRouter
 

@@ -7,6 +7,10 @@ defmodule GustWeb.Application do
 
   @impl true
   def start(_type, _args) do
+    if Application.get_env(:gust_web, :api_enabled) do
+      GustWeb.API.warn_on_missing_config()
+    end
+
     children = [
       GustWeb.Telemetry,
       GustWeb.Endpoint

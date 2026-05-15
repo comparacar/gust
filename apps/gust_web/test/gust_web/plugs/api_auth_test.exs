@@ -1,5 +1,5 @@
 defmodule GustWeb.Plugs.APIAuthTest do
-  use GustWeb.ConnCase, async: true
+  use GustWeb.ConnCase
 
   alias GustWeb.Plugs.APIAuth
 

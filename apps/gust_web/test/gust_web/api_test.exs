@@ -1,15 +1,12 @@
 defmodule GustWeb.APITest do
   use GustWeb.ConnCase
 
-  import Mox
+  import ExUnit.CaptureLog
   import Gust.FlowsFixtures
 
   alias Gust.Flows
 
   @token "gust-test-token"
-
-  setup :verify_on_exit!
-  setup :set_mox_from_context
 
   setup do
     previous_token = Application.get_env(:gust_web, :api_token)
@@ -36,57 +33,69 @@ defmodule GustWeb.APITest do
     end
   end
 
+  describe "warn_on_missing_config/0" do
+    test "returns ok when API token is configured" do
+      assert :ok = GustWeb.API.warn_on_missing_config()
+    end
+
+    test "logs warning when API token is missing" do
+      Application.delete_env(:gust_web, :api_token)
+
+      log =
+        capture_log(fn ->
+          assert {:error, :missing_api_token} = GustWeb.API.warn_on_missing_config()
+        end)
+
+      assert log =~ "Gust API token is not configured"
+    end
+
+    test "logs warning when API token is empty" do
+      Application.put_env(:gust_web, :api_token, "")
+
+      log =
+        capture_log(fn ->
+          assert {:error, :missing_api_token} = GustWeb.API.warn_on_missing_config()
+        end)
+
+      assert log =~ "Gust API token is not configured"
+    end
+  end
+
   describe "POST /api/dags/:dag_name/run" do
     test "creates an enqueued run and returns its id", %{conn: conn} do
       dag = dag_fixture(%{name: "daily_import"})
 
-      GustWeb.DAGRunTriggerMock
-      |> expect(:dispatch_run, fn run ->
-        {:ok, run} = Flows.update_run_status(run, :enqueued)
-        run
-      end)
-
       conn =
         conn
         |> put_req_header("authorization", "Bearer #{@token}")
-        |> post("/api/dags/#{dag.name}/run")
+        |> post_api("/api/dags/#{dag.name}/run")
 
-      %{"id" => id} = json_response(conn, 201)
+      %{"id" => id, "status" => "enqueued"} = json_response(conn, 201)
       run = Flows.get_run!(id)
 
       assert run.dag_id == dag.id
       assert run.status == :enqueued
     end
 
-    test "leaves run created when DAG is disabled", %{conn: conn} do
+    test "creates an enqueued run when DAG is disabled", %{conn: conn} do
       dag = dag_fixture(%{name: "disabled_import", enabled: false})
-      previous_trigger = Application.get_env(:gust, :dag_run_trigger)
-      Application.put_env(:gust, :dag_run_trigger, Gust.DAG.Run.Trigger.Requeue)
-
-      on_exit(fn ->
-        if previous_trigger do
-          Application.put_env(:gust, :dag_run_trigger, previous_trigger)
-        else
-          Application.delete_env(:gust, :dag_run_trigger)
-        end
-      end)
 
       conn =
         conn
         |> put_req_header("authorization", "Bearer #{@token}")
-        |> post("/api/dags/#{dag.name}/run")
+        |> post_api("/api/dags/#{dag.name}/run")
 
-      %{"id" => id} = json_response(conn, 201)
+      %{"id" => id, "status" => "enqueued"} = json_response(conn, 201)
       run = Flows.get_run!(id)
 
       assert run.dag_id == dag.id
-      assert run.status == :created
+      assert run.status == :enqueued
     end
 
     test "returns unauthorized without a valid bearer token", %{conn: conn} do
       dag = dag_fixture(%{name: "daily_import"})
 
-      conn = post(conn, "/api/dags/#{dag.name}/run")
+      conn = post_api(conn, "/api/dags/#{dag.name}/run")
 
       assert %{"error" => "unauthorized"} = json_response(conn, 401)
       assert Flows.count_runs_on_dag(dag.id) == 0
@@ -96,7 +105,7 @@ defmodule GustWeb.APITest do
       conn =
         conn
         |> put_req_header("authorization", "Bearer #{@token}")
-        |> post("/api/dags/missing/run")
+        |> post_api("/api/dags/missing/run")
 
       assert %{"error" => "dag_not_found"} = json_response(conn, 404)
     end
@@ -120,5 +129,9 @@ defmodule GustWeb.APITest do
       )
 
     module
+  end
+
+  defp post_api(conn, path) do
+    Phoenix.ConnTest.dispatch(conn, build_router("/api"), :post, path, nil)
   end
 end

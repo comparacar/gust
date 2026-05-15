@@ -1,6 +1,4 @@
 defmodule GustWeb.API do
-  require Logger
-
   @moduledoc """
   Router macro that mounts Gust API routes inside a host scope.
 
@@ -16,37 +14,29 @@ defmodule GustWeb.API do
         gust_api()
       end
 
-  Set `:gust_web, :api_enabled` to mount the built-in `/api` routes and enable
-  the boot-time token warning:
+  When `gust_api/0` is declared, Gust checks whether `GUST_API_TOKEN` exists
+  in the environment and emits a compile-time warning if it is missing.
+
+  Set `:gust_web, :api_enabled` to mount the built-in `/api` routes:
 
       config :gust_web, api_enabled: true
   """
 
   defmacro gust_api do
+    warn_on_missing_api_token_env(__CALLER__)
+
     quote do
       post("/dags/:dag_name/run", GustWeb.APIController, :create_run)
     end
   end
 
-  @doc """
-  Logs a warning when the Gust API token is not configured at runtime.
-
-  This is called during `GustWeb.Application` boot when
-  `:gust_web, :api_enabled` is true. It can also be called by host applications
-  that mount `gust_api/0` themselves.
-  """
-  def warn_on_missing_config do
-    token = Application.get_env(:gust_web, :api_token)
-
-    if is_binary(token) and token != "" do
-      :ok
-    else
-      Logger.warning(
-        "Gust API token is not configured. " <>
-          "Set :gust_web, :api_token or define GUST_API_TOKEN to authorize API requests."
+  defp warn_on_missing_api_token_env(env) do
+    if System.fetch_env("GUST_API_TOKEN") == :error do
+      IO.warn(
+        "Gust API route was declared, but GUST_API_TOKEN environment variable is not configured. " <>
+          "Gust API requests will be unauthorized.",
+        Macro.Env.stacktrace(env)
       )
-
-      {:error, :missing_api_token}
     end
   end
 end

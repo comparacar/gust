@@ -1,7 +1,7 @@
 defmodule GustWeb.APITest do
   use GustWeb.ConnCase
 
-  import ExUnit.CaptureLog
+  import ExUnit.CaptureIO
   import Gust.FlowsFixtures
 
   alias Gust.Flows
@@ -10,13 +10,21 @@ defmodule GustWeb.APITest do
 
   setup do
     previous_token = Application.get_env(:gust_web, :api_token)
+    previous_api_token_env = System.fetch_env("GUST_API_TOKEN")
+
     Application.put_env(:gust_web, :api_token, @token)
+    System.put_env("GUST_API_TOKEN", @token)
 
     on_exit(fn ->
       if previous_token do
         Application.put_env(:gust_web, :api_token, previous_token)
       else
         Application.delete_env(:gust_web, :api_token)
+      end
+
+      case previous_api_token_env do
+        {:ok, token} -> System.put_env("GUST_API_TOKEN", token)
+        :error -> System.delete_env("GUST_API_TOKEN")
       end
     end)
 
@@ -31,33 +39,27 @@ defmodule GustWeb.APITest do
 
       assert "/gust/api/dags/:dag_name/run" in paths
     end
-  end
 
-  describe "warn_on_missing_config/0" do
-    test "returns ok when API token is configured" do
-      assert :ok = GustWeb.API.warn_on_missing_config()
-    end
+    test "warns when GUST_API_TOKEN is missing on API declaration" do
+      System.delete_env("GUST_API_TOKEN")
 
-    test "logs warning when API token is missing" do
-      Application.delete_env(:gust_web, :api_token)
-
-      log =
-        capture_log(fn ->
-          assert {:error, :missing_api_token} = GustWeb.API.warn_on_missing_config()
+      warning =
+        capture_io(:stderr, fn ->
+          build_router("/gust/api")
         end)
 
-      assert log =~ "Gust API token is not configured"
+      assert warning =~ "GUST_API_TOKEN environment variable is not configured"
     end
 
-    test "logs warning when API token is empty" do
-      Application.put_env(:gust_web, :api_token, "")
+    test "does not warn when GUST_API_TOKEN is present but empty" do
+      System.put_env("GUST_API_TOKEN", "")
 
-      log =
-        capture_log(fn ->
-          assert {:error, :missing_api_token} = GustWeb.API.warn_on_missing_config()
+      warning =
+        capture_io(:stderr, fn ->
+          build_router("/gust/api")
         end)
 
-      assert log =~ "Gust API token is not configured"
+      assert warning == ""
     end
   end
 
